@@ -4,10 +4,10 @@ defmodule Extreme.Mixfile do
   def project do
     [
       app: :extreme,
-      version: "1.0.0+beta1",
+      version: "1.0.0",
       elixir: "~> 1.5",
       elixirc_paths: _elixirc_paths(Mix.env()),
-      source_url: "https://github.com/exponentially/extreme",
+      source_url: "https://github.com/NFIBrokerage/extreme",
       description: """
       Elixir TCP client for EventStore.
       """,
@@ -41,8 +41,8 @@ defmodule Extreme.Mixfile do
       {:jason, "~> 1.1", optional: true},
 
       # testing
-      {:exvcr, "~> 0.10", only: :test}
-      # {:ex_doc, "~> 0.19", only: :test},
+      {:exvcr, "~> 0.10", only: :test},
+      {:ex_doc, "~> 0.19", only: [:dev, :test]},
       # {:earmark, "~> 1.2", only: :test},
       # {:inch_ex, "~> 1.0", only: :test},
       # {:excoveralls, "~> 0.9", only: :test},
@@ -54,7 +54,8 @@ defmodule Extreme.Mixfile do
       files: ["lib", "mix.exs", "README*", "LICENSE*"],
       maintainers: ["Milan Burmaja", "Milan Jaric"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/exponentially/extreme"}
+      organization: "cuatro",
+      links: %{"GitHub" => "https://github.com/NFIBrokerage/extreme"}
     ]
   end
 end
