@@ -51,7 +51,7 @@ defmodule Extreme.Mixfile do
 
   defp _package do
     [
-      files: ["lib", "mix.exs", "README*", "LICENSE*"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*", "include"],
       maintainers: ["Milan Burmaja", "Milan Jaric"],
       licenses: ["MIT"],
       organization: "cuatro",
