@@ -1,14 +1,14 @@
 # Extreme
 
-[![Build Status](https://travis-ci.org/exponentially/extreme.svg?branch=master)](https://travis-ci.org/exponentially/extreme)
+[![Build Status](https://travis-ci.org/exponentially/extreme.svg?branch=v1.0.0)](https://travis-ci.org/exponentially/extreme)
 [![Hex version](https://img.shields.io/hexpm/v/extreme.svg "Hex version")](https://hex.pm/packages/extreme)
-[![InchCI](https://inch-ci.org/github/exponentially/extreme.svg?branch=master)](https://inch-ci.org/github/exponentially/extreme)
-[![Coverage Status](https://coveralls.io/repos/github/exponentially/extreme/badge.svg?branch=master)](https://coveralls.io/github/exponentially/extreme?branch=master)
+[![InchCI](https://inch-ci.org/github/exponentially/extreme.svg?branch=v1.0.0)](https://inch-ci.org/github/exponentially/extreme)
+[![Coverage Status](https://coveralls.io/repos/github/exponentially/extreme/badge.svg?branch=v1.0.0)](https://coveralls.io/github/exponentially/extreme?branch=v1.0.0)
 
 
 Erlang/Elixir TCP client for [Event Store](http://geteventstore.com/).
 
-This version is tested with EventStore 3.9.3 - 4.1.1, Elixir 1.5, 1.6, 1.7 and Erlang/OTP 19.3, 20.3 and 21.0
+This version is tested with EventStore 3.9.3, 4.1.1 and 5.0.1, Elixir 1.5 - 1.10 and Erlang/OTP 19.3 - 22.2
 
 ## INSTALL
 
@@ -16,27 +16,17 @@ Add Extreme as a dependency in your `mix.exs` file.
 
 ```elixir
 def deps do
-  [{:extreme, "~> 0.13.1"}]
+  [{:extreme, "~> 1.0.0-rc1"}]
 end
 ```
-
-In order to deploy your app using `exrm` you should also update your application list to include `:extreme`:
-
-```elixir
-def application do
-  [applications: [:extreme]]
-end
-```
-
-Extreme includes all its dependencies so you don't have to name them separately.
 
 After you are done, run `mix deps.get` in your shell to fetch and compile Extreme and its dependencies.
 
 ### EventStore v4 and later note
 
-Starting from EventStore version 4.0 there are some upgrades to communication protocol. Event number size is changed to 64bits 
-and there is new messages `IdentifyClient` and `ClientIdentified`. Since we would like to keep backward compatibility with older v3 protocol, 
-we introduced new configuration for `:extreme` application, where you have to set `:protocol_version` equal to `4` if you want to use new protocol, default is `3`. 
+Starting from EventStore version 4.0 there are some upgrades to communication protocol. Event number size is changed to 64bits
+and there is new messages `IdentifyClient` and `ClientIdentified`. Since we would like to keep backward compatibility with older v3 protocol,
+we introduced new configuration for `:extreme` application, where you have to set `:protocol_version` equal to `4` if you want to use new protocol, default is `3`.
 Below is exact line you have to add in you application config file in order to activate new protocol:
 
 ```elixir
@@ -166,6 +156,39 @@ defp rank_state("Slave", _),          do: 1
 Note that above will work with same procedure with `cluster_dns` mode turned on, since internally it will get ip addresses to which the same connection procedure will be used.
 
 Once client is disconnected from EventStore, supervisor should respawn it and connection starts over again.
+
+### Read-only clients
+
+Extreme modules may be configured as read-only with the `:read_only` option
+(default: `false`)
+
+```elixir
+config :extreme, :event_store,
+  db_type: :node,
+  host: "localhost",
+  port: 1113,
+  username: "admin",
+  password: "changeit",
+  reconnect_delay: 2_000,
+  connection_name: :my_app,
+  max_attempts: :infinity,
+  read_only: true # <- marked as read-only
+```
+
+Read-only modules are not allowed to perform write operations like writing
+events or deleting streams. Read-only clients may execute the following
+messages:
+
+- `ReadEvent`
+- `ReadStreamEvents`
+- `ReadStreamEventsBackward`
+- `ReadAllEvents`
+- `ConnectToPersistentSubscription`
+- `SubscribeToStream`
+- `UnsubscribeFromStream`
+
+Use read-only clients to ensure that a listener does not commit writes. This is
+particularly useful for Read Models.
 
 ### Communication
 
@@ -306,7 +329,7 @@ defmodule MyApp.MyListener do
       :ok = push.event.data
              |> :erlang.binary_to_term
              |> process_event(push.event.event_type)
-      DB.ack_event(MyListener, stream_name, event_number)  
+      DB.ack_event(MyListener, stream_name, event_number)
     end
     {:ok, event_number}
   end

@@ -2,8 +2,18 @@ defmodule Extreme.RequestManager do
   use GenServer
   alias Extreme.{Tools, Configuration, Request, Response, Connection}
 
+  @read_only_message_types [
+    Extreme.Messages.ReadEvent,
+    Extreme.Messages.ReadStreamEvents,
+    Extreme.Messages.ReadStreamEventsBackward,
+    Extreme.Messages.ReadAllEvents,
+    Extreme.Messages.ConnectToPersistentSubscription,
+    Extreme.Messages.SubscribeToStream,
+    Extreme.Messages.UnsubscribeFromStream
+  ]
+
   defmodule State do
-    defstruct ~w(base_name credentials requests subscriptions)a
+    defstruct ~w(base_name credentials requests subscriptions read_only)a
   end
 
   def _name(base_name), do: Module.concat(base_name, RequestManager)
@@ -80,6 +90,20 @@ defmodule Extreme.RequestManager do
     |> GenServer.call({:read_and_stay_subscribed, subscriber, params})
   end
 
+  def connect_to_persistent_subscription(
+        base_name,
+        subscriber,
+        stream,
+        group,
+        allowed_in_flight_messages
+      ) do
+    base_name
+    |> _name()
+    |> GenServer.call(
+      {:connect_to_persistent_subscription, subscriber, stream, group, allowed_in_flight_messages}
+    )
+  end
+
   ## Server callbacks
 
   @impl true
@@ -95,7 +119,8 @@ defmodule Extreme.RequestManager do
        base_name: base_name,
        credentials: Configuration.prepare_credentials(configuration),
        requests: %{},
-       subscriptions: %{}
+       subscriptions: %{},
+       read_only: Keyword.get(configuration, :read_only, false)
      }}
   end
 
@@ -109,6 +134,15 @@ defmodule Extreme.RequestManager do
     end)
 
     {:noreply, state}
+  end
+
+  def handle_call(
+        {:execute, _correlation_id, %message_type{} = _message},
+        _from,
+        %State{read_only: true} = state
+      )
+      when not (message_type in @read_only_message_types) do
+    {:reply, {:error, :read_only}, state}
   end
 
   def handle_call({:execute, correlation_id, message}, from, %State{} = state) do
@@ -154,6 +188,26 @@ defmodule Extreme.RequestManager do
     {:noreply, state}
   end
 
+  def handle_call(
+        {:connect_to_persistent_subscription, subscriber, stream, group,
+         allowed_in_flight_messages},
+        from,
+        %State{} = state
+      ) do
+    _start_subscription(self(), from, state.base_name, fn correlation_id ->
+      Extreme.SubscriptionsSupervisor.start_persistent_subscription(
+        state.base_name,
+        correlation_id,
+        subscriber,
+        stream,
+        group,
+        allowed_in_flight_messages
+      )
+    end)
+
+    {:noreply, state}
+  end
+
   defp _start_subscription(req_manager, from, base_name, fun) do
     _in_task(base_name, fn ->
       correlation_id = Tools.generate_uuid()
@@ -167,6 +221,15 @@ defmodule Extreme.RequestManager do
   end
 
   @impl true
+  def handle_cast({:execute, correlation_id, message}, %State{} = state) do
+    _in_task(state.base_name, fn ->
+      {:ok, message} = Request.prepare(message, state.credentials, correlation_id)
+      :ok = Connection.push(state.base_name, message)
+    end)
+
+    {:noreply, state}
+  end
+
   def handle_cast({:identify_client, connection_name}, %State{} = state) do
     {:ok, message} = Request.prepare(:identify_client, connection_name, state.credentials)
     :ok = Connection.push(state.base_name, message)

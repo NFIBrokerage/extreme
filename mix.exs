@@ -42,7 +42,7 @@ defmodule Extreme.Mixfile do
 
       # testing
       {:exvcr, "~> 0.10", only: :test},
-      {:ex_doc, "~> 0.19", only: [:dev, :test]},
+      {:ex_doc, ">= 0.0.0", only: :dev}
       # {:earmark, "~> 1.2", only: :test},
       # {:inch_ex, "~> 1.0", only: :test},
       # {:excoveralls, "~> 0.9", only: :test},

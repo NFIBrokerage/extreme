@@ -8,8 +8,10 @@ defmodule Extreme do
   @doc false
   defmacro __using__(opts \\ []) do
     quote do
-      @otp_app Keyword.get(unquote(opts), :otp_app, [])
-      @config Application.get_env(@otp_app, __MODULE__)
+      @otp_app Keyword.get(unquote(opts), :otp_app, :extreme)
+
+      defp _default_config,
+        do: Application.get_env(@otp_app, __MODULE__)
 
       def child_spec(opts) do
         %{
@@ -19,7 +21,8 @@ defmodule Extreme do
         }
       end
 
-      def start_link, do: Extreme.Supervisor.start_link(__MODULE__, @config)
+      def start_link(config \\ [])
+      def start_link([]), do: Extreme.Supervisor.start_link(__MODULE__, _default_config())
       def start_link(config), do: Extreme.Supervisor.start_link(__MODULE__, config)
 
       def ping,
@@ -66,6 +69,21 @@ defmodule Extreme do
 
       def unsubscribe(subscription) when is_pid(subscription),
         do: Extreme.Subscription.unsubscribe(subscription)
+
+      def connect_to_persistent_subscription(
+            subscriber,
+            stream,
+            group,
+            allowed_in_flight_messages
+          ) do
+        Extreme.RequestManager.connect_to_persistent_subscription(
+          __MODULE__,
+          subscriber,
+          stream,
+          group,
+          allowed_in_flight_messages
+        )
+      end
     end
   end
 
@@ -80,7 +98,7 @@ defmodule Extreme do
   @doc """
   TODO
   """
-  @callback execute(message :: term, correlation_id :: UUID.t()) :: term
+  @callback execute(message :: term(), correlation_id :: binary(), timeout :: integer()) :: term()
 
   @doc """
   TODO
@@ -103,10 +121,26 @@ defmodule Extreme do
               per_page :: integer(),
               resolve_link_tos :: boolean(),
               require_master :: boolean()
-            ) :: {:ok, pid}
+            ) :: {:ok, pid()}
 
   @doc """
   Pings connected EventStore and should return `:pong` back.
   """
   @callback ping() :: :pong
+
+  @doc """
+  Spawns a persistent subscription.
+
+  The persistent subscription will send events to the `subscriber` process in
+  the form of `GenServer.cast/2`s in the shape of `{:on_event, event,
+  correlation_id}`.
+
+  See `Extreme.PersistentSubscription` for full details.
+  """
+  @callback connect_to_persistent_subscription(
+              subscriber :: pid(),
+              stream :: String.t(),
+              group :: String.t(),
+              allowed_in_flight_messages :: integer()
+            ) :: {:ok, pid()}
 end
