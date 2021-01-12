@@ -189,8 +189,12 @@ defmodule Extreme.RequestManager do
   def handle_cast({:send_heartbeat_response, correlation_id}, %State{} = state) do
     {:ok, message} = Request.prepare(:heartbeat_response, correlation_id)
     # Logger.info("sending heartbeat response message for #{state.base_name}")
-    # commenting out this Connection.push to simulate missed heartbeats -> tcp_closed
-    :ok = Connection.push(state.base_name, message)
+    if Application.get_env(:event_store, :skip_one_heartbeat?, false) do
+      Application.put_env(:event_store, :skip_one_heartbeat?, false)
+    else
+      :ok = Connection.push(state.base_name, message)
+    end
+
     {:noreply, state}
   end
 
