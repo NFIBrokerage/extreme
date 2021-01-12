@@ -2,6 +2,8 @@ defmodule Extreme.RequestManager do
   use GenServer
   alias Extreme.{Tools, Configuration, Request, Response, Connection}
 
+  require Logger
+
   defmodule State do
     defstruct ~w(base_name credentials requests subscriptions)a
   end
@@ -186,6 +188,8 @@ defmodule Extreme.RequestManager do
 
   def handle_cast({:send_heartbeat_response, correlation_id}, %State{} = state) do
     {:ok, message} = Request.prepare(:heartbeat_response, correlation_id)
+    # Logger.info("sending heartbeat response message for #{state.base_name}")
+    # commenting out this Connection.push to simulate missed heartbeats -> tcp_closed
     :ok = Connection.push(state.base_name, message)
     {:noreply, state}
   end
