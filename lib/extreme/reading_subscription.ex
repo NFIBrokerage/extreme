@@ -43,6 +43,13 @@ defmodule Extreme.ReadingSubscription do
       read_until: -1
     }
 
+    connection_pid =
+      Process.whereis(FreightBillAudit.ExStreamDomainEventStoreClient.Connection)
+      |> IO.inspect(label: "#{__MODULE__} found connection pid")
+
+    connection_ref =
+      Process.monitor(connection_pid) |> IO.inspect(label: "#{__MODULE__} connection monitor ref")
+
     {:ok, subscription_confirmation} = Shared.subscribe(state)
     read_until = subscription_confirmation.last_event_number + 1
     GenServer.cast(self(), :read_events)
@@ -98,6 +105,14 @@ defmodule Extreme.ReadingSubscription do
 
     send(state.subscriber, :caught_up)
     {:noreply, %{state | status: :subscribed, buffered_messages: []}}
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
+    Logger.warn(
+      "#{__MODULE__}: Received DOWN message from #{inspect(ref)} because #{inspect(reason)}"
+    )
+
+    {:stop, :connection_closed, state}
   end
 
   defp _process_read_response({:error, :stream_deleted, _}, state) do
