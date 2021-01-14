@@ -2,14 +2,24 @@ defmodule Extreme.SubscriptionsSupervisor do
   use DynamicSupervisor
   alias Extreme.{Subscription, ReadingSubscription}
 
+  require Logger
+
   def _name(base_name),
     do: Module.concat(base_name, SubscriptionsSupervisor)
 
   def start_link(base_name),
     do: DynamicSupervisor.start_link(__MODULE__, :ok, name: _name(base_name))
 
-  def init(:ok),
-    do: DynamicSupervisor.init(strategy: :one_for_one)
+  def init(:ok) do
+    # connection_pid =
+    #   Process.whereis(FreightBillAudit.ExStreamDomainEventStoreClient.Connection)
+    #   |> IO.inspect(label: "found connection pid")
+    #
+    # connection_ref =
+    #   Process.monitor(connection_pid) |> IO.inspect(label: "SubSup's connection monitor ref")
+
+    DynamicSupervisor.init(strategy: :one_for_one)
+  end
 
   def start_subscription(
         base_name,
@@ -40,4 +50,12 @@ defmodule Extreme.SubscriptionsSupervisor do
       restart: :temporary
     })
   end
+
+  # def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
+  #   Logger.warn(
+  #     "#{__MODULE__}: Received DOWN message from #{inspect(ref)} because #{inspect(reason)}"
+  #   )
+  #
+  #   {:stop, :connection_closed, state}
+  # end
 end
