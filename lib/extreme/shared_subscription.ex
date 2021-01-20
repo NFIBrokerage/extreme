@@ -54,8 +54,10 @@ defmodule Extreme.SharedSubscription do
   Calls subscriber with {:on_event, event}, expecting :ok as result
   in order to apply backpressure.
   """
-  def on_event(subscriber, event, ack_timeout),
-    do: :ok = GenServer.call(subscriber, {:on_event, event}, ack_timeout)
+  def on_event(subscriber, event, ack_timeout) do
+    subscriber |> :sys.get_status |> IO.inspect
+    :ok = GenServer.call(subscriber, {:on_event, event}, ack_timeout)
+  end
 
   defp _process_push(
          {_auth, _correlation_id,
