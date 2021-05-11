@@ -51,8 +51,10 @@ defmodule Extreme.Connection do
   end
 
   def handle_cast({:execute, message}, %State{} = state) do
-    :ok = Impl.execute(message, state)
-    {:noreply, state}
+    case Impl.execute(message, state) do
+      :ok -> {:noreply, state}
+      other -> {:stop, {:execution_error, other}, state}
+    end
   end
 
   @impl true
@@ -63,6 +65,12 @@ defmodule Extreme.Connection do
 
   def handle_info({:tcp_closed, _port}, state),
     do: {:stop, :tcp_closed, state}
+
+  @impl true
+  def terminate(reason, state) do
+    Logger.warn("[Extreme] Connection terminated: #{inspect(reason)}")
+    RequestManager.kill_all_subscriptions(state.base_name)
+  end
 
   defp _connect(configuration, attempt) do
     {:ok, host, port} = Configuration.get_node(configuration)

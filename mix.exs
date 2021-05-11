@@ -4,8 +4,8 @@ defmodule Extreme.Mixfile do
   def project do
     [
       app: :extreme,
-      version: "1.1.0",
-      elixir: "~> 1.5",
+      version: "1.1.1",
+      elixir: "~> 1.7",
       elixirc_paths: _elixirc_paths(Mix.env()),
       source_url: "https://github.com/NFIBrokerage/extreme",
       description: """
@@ -25,7 +25,7 @@ defmodule Extreme.Mixfile do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :inets]
     ]
   end
 
